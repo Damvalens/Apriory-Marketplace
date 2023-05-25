@@ -1,54 +1,26 @@
+import numpy as np
 import pandas as pd
-from sqlalchemy import create_engine
-
-# Establecer la cadena de conexión a la base de datos
-server = '10.51.80.104,1402'
-database = 'pos_central'
-username = 'Consulta'
-password = '123Consulta123'
-connection_string = f"mssql+pyodbc://{username}:{password}@{server}/{database}?driver=ODBC+Driver+17+for+SQL+Server"
-
-# Crear el motor de SQLAlchemy
-engine = create_engine(connection_string)
-
-# Establecer la consulta SQL que deseas ejecutar
-query = """
-select  CONCAT(
-    RIGHT(CAST(vd.zeta AS VARCHAR(50)), 50), '00',
-    RIGHT(CAST(vp.nro_caja AS VARCHAR(50)), 50), '00',
-    RIGHT(CAST(vp.nro_ticket AS VARCHAR(50)), 50),'00') AS Nro_transaccion,
-vd.zeta, vp.nro_caja, vp.nro_ticket, vd.codigo, convert(bigint, vd.unidades) as cantidad, p.descripcion_producto,
-convert(bigint,vd.precio_final) as precio, CAST(vd.precio_final * CONVERT(BIGINT, vd.unidades)AS INT) AS Total, vp.documento, vp.nombre_cliente, pr.NOMBRE_PROVEEDOR, s.Cod_seccion, ss.Cod_sub_seccion,s.Secciones,ss.Sub_secciones,
-g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE
-from ventas_pos vp
-join ventas_det_pos vd on vp.zeta = vd.zeta and vp.nro_caja = vd.nro_caja and vp.nro_ticket = vd.nro_ticket
-join pegasus.DBO.productos p on vd.codigo = p.codigo
-LEFT join pegasus.DBO.Seccion S on (p.Cod_seccion = s.Cod_seccion)
-LEFT JOIN pegasus.DBO.Sub_seccion ss ON (p.Cod_sub_seccion = ss.Cod_sub_seccion)
-LEFT JOIN pegasus.DBO.GRUPO g ON (p.COD_GRUPO = g.COD_GRUPO)
-LEFT join pegasus.DBO.CATEGORIAS d on (p.COD_CATEGORIA = d.COD_CATEGORIA)
-LEFT JOIN pegasus.DBO.SUB_CATEGORIAS F ON (p.COD_SUB_CATEGORIA = f.COD_SUB_CATEGORIA)
-LEFT JOIN pegasus.DBO.proveedores pr ON (p.cod_proveedor = pr.cod_proveedor)
-where  convert(date, vp.fecha) between '2023-01-01' and '2023-03-31'
-group by vp.nro_caja, vp.nro_ticket, vd.codigo, vd.unidades, p.descripcion_producto,
-vd.precio_final,  vp.documento, vp.nombre_cliente, pr.NOMBRE_PROVEEDOR,s.Cod_seccion, ss.Cod_sub_seccion,
-g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE,vd.zeta,s.Secciones,ss.Sub_secciones
-"""
-
-# Ejecutar la consulta y cargar los resultados en un DataFrame de Pandas
-df = pd.read_sql(query, engine)
-
-# Exportar el DataFrame a un archivo Excel
-df.to_excel('output.xlsx', index=False)
-
-
-import pandas as pd
+from itertools import permutations
+from rules import zhangs_rule
+import rules
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
+import matplotlib.pyplot as plt
+import seaborn as sns
+from pandas.plotting import parallel_coordinates
+import plotly.graph_objects as go
+import plotly.express as px
+import plotly.figure_factory as ff
+import networkx as nx
+from plotly.offline import download_plotlyjs, init_notebook_mode, iplot
+import plotly
+import igraph as i
 
 # Carga los datos desde un archivo de Excel
 data = pd.read_excel('output.xlsx')
+###################################################
 
+#############################################################
 # Convierte los datos a una lista de transacciones
 transactions = []
 for trans_id, group in data.groupby('Nro_transaccion'):
@@ -64,7 +36,36 @@ frequent_itemsets = apriori(data_bin, min_support=0.01, use_colnames=True, max_l
 
 # Crea las reglas de asociación entre secciones
 rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1)
+####################################################################
+# take a quick look at the distribution of the product combination
+sns.set_context("talk")
+sns.relplot(x='antecedent support', y='consequent support', data=rules,
+            size='lift', hue='confidence', height=6, aspect=2)
+plt.title("Antecedent Support v.s. Consequent Support", fontsize=16, y=1.02)
+plt.xlabel('Antecedent Support', fontsize=12)
+plt.ylabel('Consequent Support', fontsize=12)
+plt.show()
+# remove the parentheses in the antecedents and consequents columns
+# rules['antecedents'] = rules['antecedents'].apply(lambda a: ', '.join(list(a)))
+# rules['consequents'] = rules['consequents'].apply(lambda a: ', '.join(list(a)))
+# rules.head()
+# plot a heatmap to know how strong the association is based on lift values
+pivot_support = rules.pivot(index='antecedents', columns='consequents', values='support')
 
+sns.set_context("talk")
+plt.style.use('ggplot')
+plt.subplots(figsize=(12, 16))
+sns.set()
+ax = sns.heatmap(data=pivot_support, annot=True, fmt='.2f', cmap='YlGnBu', cbar=True)
+plt.title("Items' Support Matrix", fontsize=16, y=1.02)
+ax.set_xlabel("Consequents",fontsize=16)
+ax.set_ylabel("Antecedents",fontsize=16)
+plt.xticks(rotation=45)
+plt.yticks(rotation=0)
+plt.show()
+
+
+##################################################################
 # Crea una lista para almacenar los datos de la salida
 output_data = []
 
@@ -85,17 +86,13 @@ total_per_section = data.groupby('Cod_seccion')['Total'].sum().reset_index()
 
 # Agregar la columna "Total por sección" al DataFrame "transactions_per_section"
 transactions_per_section['Total por sección'] = total_per_section['Total']
+# remove the parentheses in the antecedents and consequents columns
+rules['antecedents'] = rules['antecedents'].apply(lambda a: ', '.join(list(a)))
+rules['consequents'] = rules['consequents'].apply(lambda a: ', '.join(list(a)))
+
+rules.head()
 
 
-# Guarda los resultados en un archivo Excel
-with pd.ExcelWriter('resultado_proveedor.xlsx') as writer:
-    frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
-    rules.to_excel(writer, sheet_name='Reglas', index=False)
-    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,
-                                                                                                          sheet_name='Transacciones',
-                                                                                                          index=False)
-    transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
-    pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
 # Obtiene las transacciones únicas por sección
 unique_transactions = []
 for col in data_bin.columns:
@@ -119,7 +116,7 @@ for col in data_bin.columns:
 output_unique_df = pd.DataFrame(output_data_unique, columns=['Sección', 'Transacciones únicas'])
 
 # Guarda los resultados en un archivo Excel
-with pd.ExcelWriter('resultado_proveedor.xlsx') as writer:
+with pd.ExcelWriter('resultado_Secciones.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
     rules.to_excel(writer, sheet_name='Reglas', index=False)
     pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,sheet_name='Transacciones',index=False)
@@ -152,7 +149,7 @@ with pd.ExcelWriter('resultado_proveedor.xlsx') as writer:
     output_unique_df = pd.DataFrame(output_data_unique, columns=['Sección', 'Transacciones con otras secciones'])
 
     # Guarda los resultados en un archivo Excel
-    with pd.ExcelWriter('resultado_proveedor.xlsx') as writer:
+    with pd.ExcelWriter('resultado_Secciones.xlsx') as writer:
         frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
         rules.to_excel(writer, sheet_name='Reglas', index=False)
         pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,
@@ -228,9 +225,13 @@ proveedores_cod_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Tr
 proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
 proveedores_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones', 'Total']
 
+clientes_subseccion = data.groupby(['nombre_cliente', 'Cod_seccion', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
+clientes_subseccion.columns = ['nombre_cliente', 'Cod_seccion', 'Cod_sub_seccion','Transacciones', 'Total']
 
-
-
+clientes_cod_subseccion = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(['nombre_cliente', 'Cod_seccion'])['Nro_transaccion'].count().reset_index()
+clientes_cod_subseccion .columns = ['nombre_cliente', 'Cod_seccion', 'Transacciones únicas']
+clientes_cod_subseccion  = clientes_cod_subseccion.merge(data_sin_duplicados.groupby(['nombre_cliente', 'Cod_seccion'])['Total'].sum().reset_index(), on=['nombre_cliente', 'Cod_seccion'])
+clientes_cod_subseccion .columns = ['nombre_cliente', 'Cod_seccion', 'Transacciones únicas', 'Total']
 
 # Columnas que apareceran
 secciones_sub_secc = data.groupby(['Cod_seccion', 'Cod_sub_seccion']).agg(
@@ -284,12 +285,11 @@ output_unique_df = pd.DataFrame(output_data_unique, columns=['Sección', 'Transa
 #####################
 
 # Guarda los resultados en un archivo Excel
-with pd.ExcelWriter('resultado_proveedor.xlsx') as writer:
+with pd.ExcelWriter('resultado_Secciones.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
     rules.to_excel(writer, sheet_name='Reglas', index=False)
     pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,sheet_name='Transacciones',index=False)
     # Concatenar los DataFrames en uno solo
-
     merged_df = pd.concat([output_unique_df, transactions_per_section], axis=1)
     # Restar las columnas y guardar el resultado en una nueva columna
     merged_df['solo_pareja'] = merged_df['Nro_transaccion'] - merged_df['Transacciones únicas']
@@ -312,24 +312,26 @@ with pd.ExcelWriter('resultado_proveedor.xlsx') as writer:
 
     #output_unique_df.to_excel(writer, sheet_name='Transacciones únicas', index=False)
     #transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
-    pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
+    #pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
     #clientes_gastos.to_excel(writer,sheet_name='carritos',index=False)
     secciones_sub_secc.to_excel(writer, sheet_name='Seccion y Sub', index=False)
     transacciones_por_proveedor.to_excel(writer, sheet_name='Transacciones total proveedor', index=False)
     # Guardar en una hoja aparte llamada "Proveedores únicos"
-    proveedores_unicos.to_excel(writer, sheet_name='Proveedores trans solitos', index=False)
-    proveedores_cod_subseccion.to_excel(writer, index=False, sheet_name='Unicos con sub')
-    proveedores_subseccion.to_excel(writer, index=False, sheet_name='prov conjuntos ')
+    # proveedores_unicos.to_excel(writer, sheet_name='Proveedores trans solitos', index=False)
+    # proveedores_cod_subseccion.to_excel(writer, index=False, sheet_name='Unicos con sub')
+    # proveedores_subseccion.to_excel(writer, index=False, sheet_name='prov conjuntos ')
     transacciones_por_cliente.to_excel(writer, sheet_name='Transacciones_clientes', index=False)
-    monto_promedio.to_excel(writer, sheet_name='Monto_Promedio', index=False)
-    # Crear un DataFrame con los resultados
-    results_df = pd.DataFrame({'Total de transacciones': [total_transactions],
-                               'Transacciones únicas': [unique_transactions_count],
-                               'Transacciones con otras secciones': [other_transactions_count],
-                               'Resultado': [result]})
+    clientes_subseccion.to_excel(writer, sheet_name='Total_seccion', index=False)
+    clientes_cod_subseccion.to_excel(writer, sheet_name='Unicos_seccion', index=False)
+    # monto_promedio.to_excel(writer, sheet_name='Monto_Promedio', index=False)
+    # # Crear un DataFrame con los resultados
+    # results_df = pd.DataFrame({'Total de transacciones': [total_transactions],
+    #                            'Transacciones únicas': [unique_transactions_count],
+    #                            'Transacciones con otras secciones': [other_transactions_count],
+    #                            'Resultado': [result]})
 
     # Guardar el DataFrame en la hoja "Total"
-    results_df.to_excel(writer, sheet_name='Total', index=False)
+    # results_df.to_excel(writer, sheet_name='Total', index=False)
 ## para sub_seccion ##
 import pandas as pd
 from mlxtend.preprocessing import TransactionEncoder
@@ -476,11 +478,30 @@ with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
 
 #############
 
+# Obtener el número de transacciones únicas por proveedor
+transacciones_unicas = data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].nunique().reset_index()
+transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Nro_transacciones únicas']
 
+# Obtener el número total de transacciones sin duplicados por proveedor
+transacciones_total = data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
+transacciones_total.columns = ['NOMBRE_PROVEEDOR', 'Nro_transacciones total sin duplicados']
+
+# Combinar los resultados en un solo DataFrame
+
+# Obtener el número de transacciones únicas por proveedor
+transacciones_unicas = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
+transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas']
+
+
+# Fusionar el DataFrame "transacciones_por_proveedor" con el DataFrame "transacciones_unicas"
+#transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, transacciones_unicas, on='NOMBRE_PROVEEDOR', how='left')
+resultado = transacciones_unicas.merge(transacciones_total, on='NOMBRE_PROVEEDOR', how='left')
+resultado['conjuntos'] = resultado['Nro_transacciones total sin duplicados'] - resultado['Transacciones únicas']
+resultado['porcentaje'] = resultado['Transacciones únicas'] / resultado['Nro_transacciones total sin duplicados']
 # Agregar la columna "Cod_sub_seccion" al DataFrame data si no existe previamente
 
 
-    # Agrupar los datos por proveedor y calcular el total de nro transacción por proveedores
+# Agrupar los datos por proveedor y calcular el total de nro transacción por proveedores
 proveedor_gastos = data.groupby(['NOMBRE_PROVEEDOR'])['Total'].sum().reset_index()
 clientes_proveedor = proveedor_gastos.drop_duplicates()
 
@@ -494,12 +515,7 @@ data_sin_duplicados.drop_duplicates(subset=['Nro_transaccion', 'NOMBRE_PROVEEDOR
 proveedor_gastos = proveedor_gastos.sort_values('Total', ascending=False)
 
 # Calcular el número de transacciones por proveedor en la copia sin duplicados
-transacciones_por_proveedor = data_sin_duplicados['NOMBRE_PROVEEDOR'].value_counts().reset_index()
-transacciones_por_proveedor = transacciones_por_proveedor.drop_duplicates()
-transacciones_por_proveedor.columns = ['NOMBRE_PROVEEDOR', 'Nro_transaccion']
 
-transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, proveedor_gastos[['NOMBRE_PROVEEDOR', 'Total']], on='NOMBRE_PROVEEDOR')
-transacciones_por_proveedor = transacciones_por_proveedor.sort_values('Nro_transaccion', ascending=False)
 ##
 
 proveedores_unicos = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
@@ -577,6 +593,7 @@ for col in data_bin.columns:
 output_unique_df = pd.DataFrame(output_data_unique, columns=['Sub sección', 'Transacciones únicas'])
 #####################
 
+
 # Guarda los resultados en un archivo Excel
 with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
@@ -609,20 +626,22 @@ with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
     pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
     #clientes_gastos.to_excel(writer,sheet_name='carritos',index=False)
     secciones_sub_secc.to_excel(writer, sheet_name='Seccion y Sub', index=False)
+    transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, resultado, on='NOMBRE_PROVEEDOR', how='left')
     transacciones_por_proveedor.to_excel(writer, sheet_name='Transacciones total proveedor', index=False)
     # Guardar en una hoja aparte llamada "Proveedores únicos"
-    proveedores_unicos.to_excel(writer, sheet_name='Proveedores trans solitos', index=False)
-    proveedores_cod_subseccion.to_excel(writer, index=False, sheet_name='Unicos con sub')
-    proveedores_subseccion.to_excel(writer, index=False, sheet_name='prov conjuntos ')
+    # proveedores_unicos.to_excel(writer, sheet_name='Proveedores trans solitos', index=False)
+    # proveedores_cod_subseccion.to_excel(writer, index=False, sheet_name='Unicos con sub')
+    # proveedores_subseccion.to_excel(writer, index=False, sheet_name='prov conjuntos ')
     transacciones_por_cliente.to_excel(writer, sheet_name='Transacciones_clientes', index=False)
     clientes_subseccion.to_excel(writer, sheet_name='Total_sub_clientes', index=False)
     clientes_cod_subseccion.to_excel(writer, sheet_name='sub_clientes', index=False)
-    monto_promedio.to_excel(writer, sheet_name='Monto_Promedio', index=False)
-    # Crear un DataFrame con los resultados
-    results_df = pd.DataFrame({'Total de transacciones': [total_transactions],
-                               'Transacciones únicas': [unique_transactions_count],
-                               'Transacciones con otras secciones': [other_transactions_count],
-                               'Resultado': [result]})
 
-    # Guardar el DataFrame en la hoja "Total"
-    results_df.to_excel(writer, sheet_name='Total', index=False)
+    # monto_promedio.to_excel(writer, sheet_name='Monto_Promedio', index=False)
+    # Crear un DataFrame con los resultados
+    # results_df = pd.DataFrame({'Total de transacciones': [total_transactions],
+    #                            'Transacciones únicas': [unique_transactions_count],
+    #                            'Transacciones con otras secciones': [other_transactions_count],
+    #                            'Resultado': [result]})
+    #
+    # # Guardar el DataFrame en la hoja "Total"
+    # results_df.to_excel(writer, sheet_name='Total', index=False)
