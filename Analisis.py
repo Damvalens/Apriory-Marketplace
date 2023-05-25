@@ -444,20 +444,19 @@ transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Nro_transacciones únicas']
 
 # Obtener el número total de transacciones sin duplicados por proveedor
 transacciones_total = data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
-transacciones_total.columns = ['NOMBRE_PROVEEDOR', 'Nro_transacciones total sin duplicados']
-
-# Combinar los resultados en un solo DataFrame
 
 # Obtener el número de transacciones únicas por proveedor
 transacciones_unicas = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
 transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas']
 
-
-# Fusionar el DataFrame "transacciones_por_proveedor" con el DataFrame "transacciones_unicas"
-#transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, transacciones_unicas, on='NOMBRE_PROVEEDOR', how='left')
+# Fusionar los resultados en un solo DataFrame
 resultado = transacciones_unicas.merge(transacciones_total, on='NOMBRE_PROVEEDOR', how='left')
-resultado['conjuntos'] = resultado['Nro_transacciones total sin duplicados'] - resultado['Transacciones únicas']
-resultado['porcentaje'] = resultado['Transacciones únicas'] / resultado['Nro_transacciones total sin duplicados']
+
+# Calcular el número de transacciones no únicas (conjuntos)
+resultado['conjuntos'] = resultado['Nro_transaccion'] - resultado['Transacciones únicas']
+
+# Calcular el porcentaje de transacciones únicas
+resultado['porcentaje'] = resultado['Transacciones únicas'] / resultado['Nro_transaccion']
 # Agregar la columna "Cod_sub_seccion" al DataFrame data si no existe previamente
 
 
