@@ -213,7 +213,9 @@ transacciones_por_proveedor = transacciones_por_proveedor.sort_values('Nro_trans
 proveedores_unicos = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
 proveedores_unicos.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas']
 proveedores_unicos = proveedores_unicos.merge(data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Total'].sum().reset_index(), on='NOMBRE_PROVEEDOR')
-proveedores_unicos.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas', 'Total']
+proveedores_unicos.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas', 'Total unicos']
+
+transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, proveedores_unicos[['NOMBRE_PROVEEDOR', 'Total unicos']], on='NOMBRE_PROVEEDOR')
 
 proveedores_cod_subseccion = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Nro_transaccion'].count().reset_index()
 proveedores_cod_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones únicas']
@@ -482,22 +484,25 @@ with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
 transacciones_unicas = data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].nunique().reset_index()
 transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Nro_transacciones únicas']
 
+
+
 # Obtener el número total de transacciones sin duplicados por proveedor
 transacciones_total = data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
-transacciones_total.columns = ['NOMBRE_PROVEEDOR', 'Nro_transacciones total sin duplicados']
-
-# Combinar los resultados en un solo DataFrame
 
 # Obtener el número de transacciones únicas por proveedor
 transacciones_unicas = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
 transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas']
 
-
-# Fusionar el DataFrame "transacciones_por_proveedor" con el DataFrame "transacciones_unicas"
-#transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, transacciones_unicas, on='NOMBRE_PROVEEDOR', how='left')
+# Fusionar los resultados en un solo DataFrame
 resultado = transacciones_unicas.merge(transacciones_total, on='NOMBRE_PROVEEDOR', how='left')
-resultado['conjuntos'] = resultado['Nro_transacciones total sin duplicados'] - resultado['Transacciones únicas']
-resultado['porcentaje'] = resultado['Transacciones únicas'] / resultado['Nro_transacciones total sin duplicados']
+
+# Calcular el número de transacciones no únicas (conjuntos)
+resultado['conjuntos'] = resultado['Nro_transaccion'] - resultado['Transacciones únicas']
+
+# Calcular el porcentaje de transacciones únicas
+resultado['porcentaje'] = resultado['Transacciones únicas'] / resultado['Nro_transaccion']
+
+
 # Agregar la columna "Cod_sub_seccion" al DataFrame data si no existe previamente
 
 
