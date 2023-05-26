@@ -1,20 +1,7 @@
-import numpy as np
 import pandas as pd
-from itertools import permutations
-from rules import zhangs_rule
-import rules
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
-import matplotlib.pyplot as plt
-import seaborn as sns
-from pandas.plotting import parallel_coordinates
-import plotly.graph_objects as go
-import plotly.express as px
-import plotly.figure_factory as ff
-import networkx as nx
-from plotly.offline import download_plotlyjs, init_notebook_mode, iplot
-import plotly
-import igraph as i
+
 
 # Carga los datos desde un archivo de Excel
 data = pd.read_excel('output.xlsx')
@@ -37,32 +24,6 @@ frequent_itemsets = apriori(data_bin, min_support=0.01, use_colnames=True, max_l
 # Crea las reglas de asociación entre secciones
 rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1)
 ####################################################################
-# take a quick look at the distribution of the product combination
-sns.set_context("talk")
-sns.relplot(x='antecedent support', y='consequent support', data=rules,
-            size='lift', hue='confidence', height=6, aspect=2)
-plt.title("Antecedent Support v.s. Consequent Support", fontsize=16, y=1.02)
-plt.xlabel('Antecedent Support', fontsize=12)
-plt.ylabel('Consequent Support', fontsize=12)
-plt.show()
-# remove the parentheses in the antecedents and consequents columns
-# rules['antecedents'] = rules['antecedents'].apply(lambda a: ', '.join(list(a)))
-# rules['consequents'] = rules['consequents'].apply(lambda a: ', '.join(list(a)))
-# rules.head()
-# plot a heatmap to know how strong the association is based on lift values
-pivot_support = rules.pivot(index='antecedents', columns='consequents', values='support')
-
-sns.set_context("talk")
-plt.style.use('ggplot')
-plt.subplots(figsize=(12, 16))
-sns.set()
-ax = sns.heatmap(data=pivot_support, annot=True, fmt='.2f', cmap='YlGnBu', cbar=True)
-plt.title("Items' Support Matrix", fontsize=16, y=1.02)
-ax.set_xlabel("Consequents",fontsize=16)
-ax.set_ylabel("Antecedents",fontsize=16)
-plt.xticks(rotation=45)
-plt.yticks(rotation=0)
-plt.show()
 
 
 ##################################################################
@@ -650,3 +611,4 @@ with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
     #
     # # Guardar el DataFrame en la hoja "Total"
     # results_df.to_excel(writer, sheet_name='Total', index=False)
+
