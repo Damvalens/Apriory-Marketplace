@@ -1,6 +1,7 @@
 import pandas as pd
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
+#comentario 
 
 # Carga los datos desde un archivo de Excel
 data = pd.read_excel('output.xlsx')
