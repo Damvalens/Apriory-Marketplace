@@ -2,7 +2,6 @@ import pandas as pd
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
 
-
 # Carga los datos desde un archivo de Excel
 data = pd.read_excel('output.xlsx')
 
@@ -43,7 +42,6 @@ total_per_section = data.groupby('Cod_seccion')['Total'].sum().reset_index()
 # Agregar la columna "Total por sección" al DataFrame "transactions_per_section"
 transactions_per_section['Total por sección'] = total_per_section['Total']
 
-
 # Guarda los resultados en un archivo Excel
 with pd.ExcelWriter('resultado_secciones.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
@@ -79,7 +77,9 @@ output_unique_df = pd.DataFrame(output_data_unique, columns=['Sección', 'Transa
 with pd.ExcelWriter('resultado_Secciones.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
     rules.to_excel(writer, sheet_name='Reglas', index=False)
-    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,sheet_name='Transacciones',index=False)
+    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,
+                                                                                                          sheet_name='Transacciones',
+                                                                                                          index=False)
     output_unique_df.to_excel(writer, sheet_name='Transacciones únicas', index=False)
     transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
 
@@ -148,7 +148,7 @@ with pd.ExcelWriter('resultado_Secciones.xlsx') as writer:
 # Agregar la columna "COD_SECCION" al DataFrame data si no existe previamente
 
 
-    # Agrupar los datos por proveedor y calcular el total de nro transacción por proveedores
+# Agrupar los datos por proveedor y calcular el total de nro transacción por proveedores
 proveedor_gastos = data.groupby(['NOMBRE_PROVEEDOR'])['Total'].sum().reset_index()
 clientes_proveedor = proveedor_gastos.drop_duplicates()
 
@@ -166,33 +166,47 @@ transacciones_por_proveedor = data_sin_duplicados['NOMBRE_PROVEEDOR'].value_coun
 transacciones_por_proveedor = transacciones_por_proveedor.drop_duplicates()
 transacciones_por_proveedor.columns = ['NOMBRE_PROVEEDOR', 'Nro_transaccion']
 
-transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, proveedor_gastos[['NOMBRE_PROVEEDOR', 'Total']], on='NOMBRE_PROVEEDOR')
+transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, proveedor_gastos[['NOMBRE_PROVEEDOR', 'Total']],
+                                       on='NOMBRE_PROVEEDOR')
 transacciones_por_proveedor = transacciones_por_proveedor.sort_values('Nro_transaccion', ascending=False)
 ##
 
-proveedores_unicos = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
+proveedores_unicos = \
+data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')[
+    'Nro_transaccion'].count().reset_index()
 proveedores_unicos.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas']
-proveedores_unicos = proveedores_unicos.merge(data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Total'].sum().reset_index(), on='NOMBRE_PROVEEDOR')
+proveedores_unicos = proveedores_unicos.merge(
+    data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Total'].sum().reset_index(), on='NOMBRE_PROVEEDOR')
 proveedores_unicos.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas', 'Total unicos']
-transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, proveedores_unicos[['NOMBRE_PROVEEDOR', 'Total unicos']], on='NOMBRE_PROVEEDOR')
+transacciones_por_proveedor = pd.merge(transacciones_por_proveedor,
+                                       proveedores_unicos[['NOMBRE_PROVEEDOR', 'Total unicos']], on='NOMBRE_PROVEEDOR')
 
-proveedores_cod_subseccion = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Nro_transaccion'].count().reset_index()
+proveedores_cod_subseccion = \
+data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(
+    ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Nro_transaccion'].count().reset_index()
 proveedores_cod_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones únicas']
-proveedores_cod_subseccion = proveedores_cod_subseccion.merge(data_sin_duplicados.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Total'].sum().reset_index(), on=['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])
+proveedores_cod_subseccion = proveedores_cod_subseccion.merge(
+    data_sin_duplicados.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Total'].sum().reset_index(),
+    on=['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])
 proveedores_cod_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones únicas', 'Total']
 
-#proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'count', 'Total': 'sum'}).reset_index()
-#proveedores_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones', 'Total']
-proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
+# proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'count', 'Total': 'sum'}).reset_index()
+# proveedores_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones', 'Total']
+proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg(
+    {'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
 proveedores_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones', 'Total']
 
-clientes_subseccion = data.groupby(['nombre_cliente', 'Cod_seccion', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
-clientes_subseccion.columns = ['nombre_cliente', 'Cod_seccion', 'Cod_sub_seccion','Transacciones', 'Total']
+clientes_subseccion = data.groupby(['nombre_cliente', 'Cod_seccion', 'Cod_sub_seccion']).agg(
+    {'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
+clientes_subseccion.columns = ['nombre_cliente', 'Cod_seccion', 'Cod_sub_seccion', 'Transacciones', 'Total']
 
-clientes_cod_subseccion = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(['nombre_cliente', 'Cod_seccion'])['Nro_transaccion'].count().reset_index()
-clientes_cod_subseccion .columns = ['nombre_cliente', 'Cod_seccion', 'Transacciones únicas']
-clientes_cod_subseccion  = clientes_cod_subseccion.merge(data_sin_duplicados.groupby(['nombre_cliente', 'Cod_seccion'])['Total'].sum().reset_index(), on=['nombre_cliente', 'Cod_seccion'])
-clientes_cod_subseccion .columns = ['nombre_cliente', 'Cod_seccion', 'Transacciones únicas', 'Total']
+clientes_cod_subseccion = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(
+    ['nombre_cliente', 'Cod_seccion'])['Nro_transaccion'].count().reset_index()
+clientes_cod_subseccion.columns = ['nombre_cliente', 'Cod_seccion', 'Transacciones únicas']
+clientes_cod_subseccion = clientes_cod_subseccion.merge(
+    data_sin_duplicados.groupby(['nombre_cliente', 'Cod_seccion'])['Total'].sum().reset_index(),
+    on=['nombre_cliente', 'Cod_seccion'])
+clientes_cod_subseccion.columns = ['nombre_cliente', 'Cod_seccion', 'Transacciones únicas', 'Total']
 
 # Columnas que apareceran
 secciones_sub_secc = data.groupby(['Cod_seccion', 'Cod_sub_seccion']).agg(
@@ -203,7 +217,7 @@ secciones_sub_secc = secciones_sub_secc.sort_values('Total', ascending=False)
 # Agrupar los datos por cliente y calcular el total gastado por cada cliente
 
 clientes_gastos = data.groupby(['nombre_cliente'])['Total'].sum().reset_index()
-clientes_gastos=clientes_gastos.drop_duplicates()
+clientes_gastos = clientes_gastos.drop_duplicates()
 
 # Eliminar las filas duplicadas para cada Nro Transaccion
 data = data.drop_duplicates(subset=['Nro_transaccion', 'nombre_cliente'])
@@ -215,9 +229,9 @@ clientes_gastos = clientes_gastos.sort_values('Total', ascending=False)
 transacciones_por_cliente = data['nombre_cliente'].value_counts().reset_index()
 transacciones_por_cliente = transacciones_por_cliente.drop_duplicates()
 transacciones_por_cliente.columns = ['nombre_cliente', 'Nro_transaccion']
-transacciones_por_cliente=pd.merge(transacciones_por_cliente,clientes_gastos[['nombre_cliente','Total']], on='nombre_cliente')
+transacciones_por_cliente = pd.merge(transacciones_por_cliente, clientes_gastos[['nombre_cliente', 'Total']],
+                                     on='nombre_cliente')
 transacciones_por_cliente = transacciones_por_cliente.sort_values('Nro_transaccion', ascending=False)
-
 
 # Calcular el monto promedio por transacción
 monto_promedio = data.groupby('nombre_cliente')['Total'].mean().reset_index()
@@ -249,7 +263,9 @@ output_unique_df = pd.DataFrame(output_data_unique, columns=['Sección', 'Transa
 with pd.ExcelWriter('resultado_Secciones.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
     rules.to_excel(writer, sheet_name='Reglas', index=False)
-    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,sheet_name='Transacciones',index=False)
+    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,
+                                                                                                          sheet_name='Transacciones',
+                                                                                                          index=False)
     # Concatenar los DataFrames en uno solo
 
     merged_df = pd.concat([output_unique_df, transactions_per_section], axis=1)
@@ -262,20 +278,20 @@ with pd.ExcelWriter('resultado_Secciones.xlsx') as writer:
     # Formatear los valores como porcentaje
     merged_df['division pareja'] = merged_df['division pareja'].apply(lambda x: f"{x:.2%}")
     # Calcular el monto de la división solitos
-    #merged_df['Monto Division Solitos'] = (merged_df['division solitos'].str.rstrip('%').astype(float) / 100) * \
-                                          #merged_df['Total por sección']
-    #merged_df['Monto Division Parejas'] = (merged_df['division pareja'].str.rstrip('%').astype(float) / 100) * \
-                                          #merged_df['Total por sección']
+    # merged_df['Monto Division Solitos'] = (merged_df['division solitos'].str.rstrip('%').astype(float) / 100) * \
+    # merged_df['Total por sección']
+    # merged_df['Monto Division Parejas'] = (merged_df['division pareja'].str.rstrip('%').astype(float) / 100) * \
+    # merged_df['Total por sección']
     transactions_per_section.to_excel(writer, sheet_name='Unicas y Juntas', index=False)
     pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
 
     # Guardar el DataFrame combinado en una hoja de cálculo
     merged_df.to_excel(writer, sheet_name='Unicas y Juntas', index=False)
 
-    #output_unique_df.to_excel(writer, sheet_name='Transacciones únicas', index=False)
-    #transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
+    # output_unique_df.to_excel(writer, sheet_name='Transacciones únicas', index=False)
+    # transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
     # pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
-    #clientes_gastos.to_excel(writer,sheet_name='carritos',index=False)
+    # clientes_gastos.to_excel(writer,sheet_name='carritos',index=False)
     secciones_sub_secc.to_excel(writer, sheet_name='Seccion y Sub', index=False)
     transacciones_por_proveedor.to_excel(writer, sheet_name='Transacciones total proveedor', index=False)
     # Guardar en una hoja aparte llamada "Proveedores únicos"
@@ -339,7 +355,6 @@ total_per_section = data.groupby('Cod_sub_seccion')['Total'].sum().reset_index()
 # Agregar la columna "Total por sección" al DataFrame "transactions_per_section"
 transactions_per_section['Total por Sub sección'] = total_per_section['Total']
 
-
 # Guarda los resultados en un archivo Excel
 with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
@@ -375,7 +390,9 @@ output_unique_df = pd.DataFrame(output_data_unique, columns=['Sub Sección', 'Tr
 with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
     rules.to_excel(writer, sheet_name='Reglas', index=False)
-    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,sheet_name='Transacciones',index=False)
+    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,
+                                                                                                          sheet_name='Transacciones',
+                                                                                                          index=False)
     output_unique_df.to_excel(writer, sheet_name='Transacciones únicas', index=False)
     transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
 
@@ -448,7 +465,9 @@ transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Nro_transacciones únicas']
 transacciones_total = data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
 
 # Obtener el número de transacciones únicas por proveedor
-transacciones_unicas = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
+transacciones_unicas = \
+data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')[
+    'Nro_transaccion'].count().reset_index()
 transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas']
 
 # Fusionar los resultados en un solo DataFrame
@@ -479,30 +498,40 @@ proveedor_gastos = proveedor_gastos.sort_values('Total', ascending=False)
 
 ##
 
-proveedores_unicos = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
+proveedores_unicos = \
+data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')[
+    'Nro_transaccion'].count().reset_index()
 proveedores_unicos.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas']
-proveedores_unicos = proveedores_unicos.merge(data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Total'].sum().reset_index(), on='NOMBRE_PROVEEDOR')
+proveedores_unicos = proveedores_unicos.merge(
+    data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Total'].sum().reset_index(), on='NOMBRE_PROVEEDOR')
 proveedores_unicos.columns = ['NOMBRE_PROVEEDOR', 'Transacciones únicas', 'Total']
 
-
-proveedores_cod_subseccion = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Nro_transaccion'].count().reset_index()
+proveedores_cod_subseccion = \
+data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(
+    ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Nro_transaccion'].count().reset_index()
 proveedores_cod_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones únicas']
-proveedores_cod_subseccion = proveedores_cod_subseccion.merge(data_sin_duplicados.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Total'].sum().reset_index(), on=['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])
+proveedores_cod_subseccion = proveedores_cod_subseccion.merge(
+    data_sin_duplicados.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])['Total'].sum().reset_index(),
+    on=['NOMBRE_PROVEEDOR', 'Cod_sub_seccion'])
 proveedores_cod_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones únicas', 'Total']
 
-#proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'count', 'Total': 'sum'}).reset_index()
-#proveedores_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones', 'Total']
-proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
+# proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'count', 'Total': 'sum'}).reset_index()
+# proveedores_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones', 'Total']
+proveedores_subseccion = data.groupby(['NOMBRE_PROVEEDOR', 'Cod_sub_seccion']).agg(
+    {'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
 proveedores_subseccion.columns = ['NOMBRE_PROVEEDOR', 'Cod_sub_seccion', 'Transacciones', 'Total']
 
-clientes_cod_subseccion = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(['nombre_cliente', 'Cod_sub_seccion'])['Nro_transaccion'].count().reset_index()
-clientes_cod_subseccion .columns = ['nombre_cliente', 'Cod_sub_seccion', 'Transacciones únicas']
-clientes_cod_subseccion  = clientes_cod_subseccion.merge(data_sin_duplicados.groupby(['nombre_cliente', 'Cod_sub_seccion'])['Total'].sum().reset_index(), on=['nombre_cliente', 'Cod_sub_seccion'])
-clientes_cod_subseccion .columns = ['nombre_cliente', 'Cod_sub_seccion', 'Transacciones únicas', 'Total']
+clientes_cod_subseccion = data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby(
+    ['nombre_cliente', 'Cod_sub_seccion'])['Nro_transaccion'].count().reset_index()
+clientes_cod_subseccion.columns = ['nombre_cliente', 'Cod_sub_seccion', 'Transacciones únicas']
+clientes_cod_subseccion = clientes_cod_subseccion.merge(
+    data_sin_duplicados.groupby(['nombre_cliente', 'Cod_sub_seccion'])['Total'].sum().reset_index(),
+    on=['nombre_cliente', 'Cod_sub_seccion'])
+clientes_cod_subseccion.columns = ['nombre_cliente', 'Cod_sub_seccion', 'Transacciones únicas', 'Total']
 
-clientes_subseccion = data.groupby(['nombre_cliente', 'Cod_sub_seccion']).agg({'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
+clientes_subseccion = data.groupby(['nombre_cliente', 'Cod_sub_seccion']).agg(
+    {'Nro_transaccion': 'nunique', 'Total': 'sum'}).reset_index()
 clientes_subseccion.columns = ['nombre_cliente', 'Cod_sub_seccion', 'Transacciones', 'Total']
-
 
 # Columnas que apareceran
 secciones_sub_secc = data.groupby(['Cod_seccion', 'Cod_sub_seccion']).agg(
@@ -513,7 +542,7 @@ secciones_sub_secc = secciones_sub_secc.sort_values('Total', ascending=False)
 # Agrupar los datos por cliente y calcular el total gastado por cada cliente
 
 clientes_gastos = data.groupby(['nombre_cliente'])['Total'].sum().reset_index()
-clientes_gastos=clientes_gastos.drop_duplicates()
+clientes_gastos = clientes_gastos.drop_duplicates()
 
 # Eliminar las filas duplicadas para cada Nro Transaccion
 data = data.drop_duplicates(subset=['Nro_transaccion', 'nombre_cliente'])
@@ -525,9 +554,9 @@ clientes_gastos = clientes_gastos.sort_values('Total', ascending=False)
 transacciones_por_cliente = data['nombre_cliente'].value_counts().reset_index()
 transacciones_por_cliente = transacciones_por_cliente.drop_duplicates()
 transacciones_por_cliente.columns = ['nombre_cliente', 'Nro_transaccion']
-transacciones_por_cliente=pd.merge(transacciones_por_cliente,clientes_gastos[['nombre_cliente','Total']], on='nombre_cliente')
+transacciones_por_cliente = pd.merge(transacciones_por_cliente, clientes_gastos[['nombre_cliente', 'Total']],
+                                     on='nombre_cliente')
 transacciones_por_cliente = transacciones_por_cliente.sort_values('Nro_transaccion', ascending=False)
-
 
 # Calcular el monto promedio por transacción
 monto_promedio = data.groupby('nombre_cliente')['Total'].mean().reset_index()
@@ -560,7 +589,9 @@ output_unique_df = pd.DataFrame(output_data_unique, columns=['Sub sección', 'Tr
 with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
     frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
     rules.to_excel(writer, sheet_name='Reglas', index=False)
-    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,sheet_name='Transacciones',index=False)
+    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer,
+                                                                                                          sheet_name='Transacciones',
+                                                                                                          index=False)
     # Concatenar los DataFrames en uno solo
 
     merged_df = pd.concat([output_unique_df, transactions_per_section], axis=1)
@@ -573,20 +604,20 @@ with pd.ExcelWriter('resultado_subseccion.xlsx') as writer:
     # Formatear los valores como porcentaje
     merged_df['division pareja'] = merged_df['division pareja'].apply(lambda x: f"{x:.2%}")
     # Calcular el monto de la división solitos
-    #merged_df['Monto Division Solitos'] = (merged_df['division solitos'].str.rstrip('%').astype(float) / 100) * \
-                                          #merged_df['Total por sección']
-    #merged_df['Monto Division Parejas'] = (merged_df['division pareja'].str.rstrip('%').astype(float) / 100) * \
-                                          #merged_df['Total por sección']
+    # merged_df['Monto Division Solitos'] = (merged_df['division solitos'].str.rstrip('%').astype(float) / 100) * \
+    # merged_df['Total por sección']
+    # merged_df['Monto Division Parejas'] = (merged_df['division pareja'].str.rstrip('%').astype(float) / 100) * \
+    # merged_df['Total por sección']
     transactions_per_section.to_excel(writer, sheet_name='Unicas y Juntas', index=False)
-    #pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
+    # pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
 
     # Guardar el DataFrame combinado en una hoja de cálculo
     merged_df.to_excel(writer, sheet_name='Unicas y Juntas', index=False)
 
-    #output_unique_df.to_excel(writer, sheet_name='Transacciones únicas', index=False)
-    #transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
-    #pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
-    #clientes_gastos.to_excel(writer,sheet_name='carritos',index=False)
+    # output_unique_df.to_excel(writer, sheet_name='Transacciones únicas', index=False)
+    # transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
+    # pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
+    # clientes_gastos.to_excel(writer,sheet_name='carritos',index=False)
     secciones_sub_secc.to_excel(writer, sheet_name='Seccion y Sub', index=False)
     transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, resultado, on='NOMBRE_PROVEEDOR', how='left')
     transacciones_por_proveedor.to_excel(writer, sheet_name='Transacciones total proveedor', index=False)
