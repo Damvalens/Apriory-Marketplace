@@ -1,6 +1,7 @@
 import pandas as pd
 from mlxtend.preprocessing import TransactionEncoder
 from mlxtend.frequent_patterns import apriori, association_rules
+import xlsxwriter
 # Carga los datos desde un archivo de Excel
 data = pd.read_excel('output.xlsx')
 # Convierte los datos a una lista de transacciones
@@ -129,10 +130,8 @@ transacciones_por_proveedor = transacciones_por_proveedor.sort_values('Nro_trans
 # Obtener el número de transacciones únicas por proveedor
 transacciones_unicas = data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].nunique().reset_index()
 transacciones_unicas.columns = ['NOMBRE_PROVEEDOR', 'Nro_transacciones únicas']
-
 # Obtener el número total de transacciones sin duplicados por proveedor
 transacciones_total = data_sin_duplicados.groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
-
 # Obtener el número de transacciones únicas por proveedor
 transacciones_unicas = \
 data_sin_duplicados[~data_sin_duplicados['Nro_transaccion'].duplicated(keep=False)].groupby('NOMBRE_PROVEEDOR')['Nro_transaccion'].count().reset_index()
@@ -142,7 +141,8 @@ resultado = transacciones_unicas.merge(transacciones_total, on='NOMBRE_PROVEEDOR
 # Calcular el número de transacciones no únicas (conjuntos)
 resultado['conjuntos'] = resultado['Nro_transaccion'] - resultado['Transacciones únicas']
 # Calcular el porcentaje de transacciones únicas
-resultado['porcentaje'] = resultado['Transacciones únicas'] / resultado['Nro_transaccion']
+resultado['% UNICOS'] = resultado['Transacciones únicas'] / resultado['Nro_transaccion']
+resultado ['% NO UNICOS'] = resultado['conjuntos'] / resultado['Nro_transaccion']
 # Agregar la columna "Cod_sub_seccion" al DataFrame data si no existe previamente
 # Agrupar los datos por proveedor y calcular el total de nro transacción por proveedores
 proveedor_gastos = data.groupby(['NOMBRE_PROVEEDOR'])['Total'].sum().reset_index()
@@ -231,33 +231,13 @@ with pd.ExcelWriter('resultado_Secciones.xlsx') as writer:
     merged_df['% NO UNICOS'] = merged_df['NO UNICOS'] / merged_df['Nro_transaccion']
     # Formatear los valores como porcentaje
     merged_df['% NO UNICOS'] = merged_df['% NO UNICOS'].apply(lambda x: f"{x:.2%}")
-
-
-    # Calcular el monto de la división solitos
-    # merged_df['Monto Division Solitos'] = (merged_df['division solitos'].str.rstrip('%').astype(float) / 100) * \
-    # merged_df['Total por sección']
-    # merged_df['Monto Division Parejas'] = (merged_df['division pareja'].str.rstrip('%').astype(float) / 100) * \
-    # merged_df['Total por sección']
     transactions_per_section.to_excel(writer, sheet_name='Unicas y Juntas', index=False)
     pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
     # Guardar el DataFrame combinado en una hoja de cálculo
     merged_df.to_excel(writer, sheet_name='Unicas y Juntas', index=False)
-    # output_unique_df.to_excel(writer, sheet_name='Transacciones únicas', index=False)
-    # transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
-    # pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
-    # clientes_gastos.to_excel(writer,sheet_name='carritos',index=False)
     secciones_sub_secc.to_excel(writer, sheet_name='Seccion y Sub', index=False)
     transacciones_por_proveedor = pd.merge(transacciones_por_proveedor, resultado, on='NOMBRE_PROVEEDOR', how='left')
     transacciones_por_proveedor.to_excel(writer, sheet_name='Transacciones total proveedor', index=False)
-    # Guardar en una hoja aparte llamada "Proveedores únicos"
-    # proveedores_unicos.to_excel(writer, sheet_name='Proveedores trans solitos', index=False)
-    # proveedores_cod_subseccion.to_excel(writer, index=False, sheet_name='Unicos con sub')
-    # proveedores_subseccion.to_excel(writer, index=False, sheet_name='prov conjuntos ')
     transacciones_por_cliente.to_excel(writer, sheet_name='Transacciones_clientes', index=False)
     clientes_subseccion.to_excel(writer, sheet_name='Total_seccion', index=False)
     clientes_cod_subseccion.to_excel(writer, sheet_name='Unicos_seccion', index=False)
-    # monto_promedio.to_excel(writer, sheet_name='Monto_Promedio', index=False)
-    # Crear un DataFrame con los resultados
-    # results_df = pd.DataFrame({'Total de transacciones': [total_transactions], 'Transacciones únicas': [unique_transactions_count],'Transacciones con otras secciones': [other_transactions_count],'Resultado': [result]})
-    # # Guardar el DataFrame en la hoja "Total"
-    # results_df.to_excel(writer, sheet_name='Total', index=False)
