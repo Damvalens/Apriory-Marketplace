@@ -19,28 +19,9 @@ select  CONCAT(
     RIGHT(CAST(vd.zeta AS VARCHAR(50)), 50), '00',
     RIGHT(CAST(vp.nro_caja AS VARCHAR(50)), 50), '00',
     RIGHT(CAST(vp.nro_ticket AS VARCHAR(50)), 50),'00') AS Nro_transaccion,
-convert(date,vp.fecha) as FECHA,
-vd.zeta, vp.nro_caja,
-vp.nro_ticket,
-vd.codigo,
-convert(bigint, vd.unidades) as cantidad, p.descripcion_producto,
-cast((p.PRECIO_COSTO)*1.1 as int ) as PRECIO_COSTO,
-convert(bigint,vd.precio_final) as PRECIO_UNI,
---CAST(vd.precio_final * CONVERT(BIGINT, vd.unidades)AS INT) AS PRECIO_SIN_DESC,
-convert(bigint, vd.unidades)  * CONVERT(int,vd.precio_final_desc) AS Total,
-convert(int,vp.desc_global) as Porc_desc,
-cast((cast(vd.precio_final as bigint) * convert(float,vp.desc_global)/100) as int) as Desc_Aplicado,
-convert(bigint, vd.unidades)  * CONVERT(int,vd.precio_final_desc)-cast((p.PRECIO_COSTO)*1.1 as int ) AS UTILIDAD,
-vp.documento, 
-vp.nombre_cliente, 
-pr.NOMBRE_PROVEEDOR, 
-s.Cod_seccion, 
-ss.Cod_sub_seccion,
-s.Secciones,
-ss.Sub_secciones,
-g.DESCRIPCION_GRUPO,  
-d.DESCRIPCION_CATE,
-f.DESCRIPCION_SUB_CATE
+vd.zeta, vp.nro_caja, vp.nro_ticket, vd.codigo, convert(bigint, vd.unidades) as cantidad, p.descripcion_producto,
+convert(bigint,vd.precio_final) as precio, CAST(vd.precio_final * CONVERT(BIGINT, vd.unidades)AS INT) AS Total, vp.documento, vp.nombre_cliente, pr.NOMBRE_PROVEEDOR, s.Cod_seccion, ss.Cod_sub_seccion,s.Secciones,ss.Sub_secciones,
+g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE
 from ventas_pos vp
 join ventas_det_pos vd on vp.zeta = vd.zeta and vp.nro_caja = vd.nro_caja and vp.nro_ticket = vd.nro_ticket
 join pegasus.DBO.productos p on vd.codigo = p.codigo
@@ -50,9 +31,9 @@ LEFT JOIN pegasus.DBO.GRUPO g ON (p.COD_GRUPO = g.COD_GRUPO)
 LEFT join pegasus.DBO.CATEGORIAS d on (p.COD_CATEGORIA = d.COD_CATEGORIA)
 LEFT JOIN pegasus.DBO.SUB_CATEGORIAS F ON (p.COD_SUB_CATEGORIA = f.COD_SUB_CATEGORIA)
 LEFT JOIN pegasus.DBO.proveedores pr ON (p.cod_proveedor = pr.cod_proveedor)
-WHERE convert(date,vp.fecha) BETWEEN '2023-08-01' AND '2023-08-31'
+WHERE convert(date,vp.fecha) BETWEEN '2023-01-01' AND '2023-10-12'
 
-group by vp.nro_caja, vp.nro_ticket, vd.codigo, vd.unidades, p.descripcion_producto,vp.desc_global,p.PRECIO_COSTO,vd.precio_final_desc,vp.fecha,
+group by vp.nro_caja, vp.nro_ticket, vd.codigo, vd.unidades, p.descripcion_producto,
 vd.precio_final,  vp.documento, vp.nombre_cliente, pr.NOMBRE_PROVEEDOR,s.Cod_seccion, ss.Cod_sub_seccion,
 g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE,vd.zeta,s.Secciones,ss.Sub_secciones"""
 
@@ -96,14 +77,6 @@ transactions_total = data['Nro_transaccion'].nunique()
 total_per_section = data.groupby('Cod_seccion')['Total'].sum().reset_index()
 # Agregar la columna "Total por sección" al DataFrame "transactions_per_section"
 transactions_per_section['TOTAL VENTA (Gs)'] = total_per_section['Total']
-
-# Guarda los resultados en un archivo Excel
-with pd.ExcelWriter('resultado_secciones.xlsx') as writer:
-    frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
-    rules.to_excel(writer, sheet_name='Reglas', index=False)
-    pd.DataFrame(output_data, columns=['Antecedente', 'Consecuente', 'Número de transacciones']).to_excel(writer, sheet_name='Transacciones',                                                                                                         index=False)
-    transactions_per_section.to_excel(writer, sheet_name='Transacciones por sección', index=False)
-    pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
 # Obtiene las transacciones únicas por sección
 unique_transactions = []
 for col in data_bin.columns:
