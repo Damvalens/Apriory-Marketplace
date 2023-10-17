@@ -9,7 +9,6 @@ from tkinter import filedialog, messagebox
 
 global registro_button, vpr_button, proveedor_entry, proveedor_entry_2, start_date_entry,start_date_entry_2,end_date_entry_2,end_date_entry, query_button, query_button2,query_button3, back_button, labels
 
-
 # Función para consultar los datos y guardarlos en un archivo Excel
 def query_and_save_data():
     # Obtener el número de proveedor ingresado por el usuario
