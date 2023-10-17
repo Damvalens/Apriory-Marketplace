@@ -103,7 +103,6 @@ GROUP BY
                 results.to_csv(file_path, index=False)
             messagebox.showinfo("Guardar", f"Los resultados se han guardado exitosamente en el archivo.")
 
-
 def create_and_run_interface():
     global proveedor_entry, registro_button, query_button, back_button, labels
 
