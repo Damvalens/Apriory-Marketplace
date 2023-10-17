@@ -42,9 +42,6 @@ df = pd.read_sql(query, engine)
 
 # Exportar el DataFrame a un archivo Excel
 df.to_excel('output.xlsx', index=False)
-
-
-import xlsxwriter
 # Carga los datos desde un archivo de Excel
 data = pd.read_excel('output.xlsx')
 # Convierte los datos a una lista de transacciones
