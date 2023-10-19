@@ -410,7 +410,7 @@ LEFT join pegasus.DBO.CATEGORIAS d on (p.COD_CATEGORIA = d.COD_CATEGORIA)
 LEFT JOIN pegasus.DBO.SUB_CATEGORIAS F ON (p.COD_SUB_CATEGORIA = f.COD_SUB_CATEGORIA)
 LEFT JOIN pegasus.DBO.proveedores pr ON (p.cod_proveedor = pr.cod_proveedor)
 WHERE convert(date,vp.fecha) BETWEEN '{start_date_2}' AND '{end_date_2}'
-
+and s.cod_seccion not in ('25','14','16','19','23','22','18','26','-1','15','24','2','12','46','48')
 group by vp.nro_caja, vp.nro_ticket, vd.codigo, vd.unidades, p.descripcion_producto,
 vd.precio_final,  vp.documento, vp.nombre_cliente, pr.NOMBRE_PROVEEDOR,s.Cod_seccion, ss.Cod_sub_seccion,
 g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE,vd.zeta,s.Secciones,ss.Sub_secciones"""
@@ -649,8 +649,9 @@ g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE,vd.zeta,s.Secci
         transactions_count = len(unique_transactions.loc[unique_transactions[col] == 1])
         output_data_unique.append([col, transactions_count])
     # Crea un DataFrame con los datos de la salida
-    output_unique_df = pd.DataFrame(output_data_unique, columns=['SECCION', 'TRANSACCIONES ÚNICAS'])
+    output_unique_df = pd.DataFrame(output_data_unique, columns=['SECCION', 'TRX ÚNICAS'])
     #####################
+
     # Guarda los resultados en un archivo Excel
     with pd.ExcelWriter('carrito.xlsx') as writer:
         frequent_itemsets.to_excel(writer, sheet_name='Frecuentes', index=False)
@@ -667,6 +668,13 @@ g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE,vd.zeta,s.Secci
         merged_df['% NO UNICOS'] = merged_df['NO UNICOS'] / merged_df['Nro_transaccion']
         # Formatear los valores como porcentaje
         merged_df['% NO UNICOS'] = merged_df['% NO UNICOS'].apply(lambda x: f"{x:.2%}")
+        # sumar solo la columna de TOTAL VENTA(GS) al final de la tabla
+        transactions_total = merged_df['TOTAL VENTA (Gs)'].sum()
+        # Ordenar los datos por Nro_transaccion de mayor a menor
+        merged_df = merged_df.sort_values('Nro_transaccion', ascending=False)
+        merged_df['% ACUM POR TRANSACCIONES'] = merged_df['TOTAL VENTA (Gs)'] / transactions_total
+        # Calcular el porcentaje acumulado y sumarlo en la siguiente celda
+        merged_df['% ACUM POR TRANSACCIONES'] = merged_df['% ACUM POR TRANSACCIONES'].cumsum().shift(fill_value=0)
         transactions_per_section.to_excel(writer, sheet_name='Unicas y Juntas', index=False)
         pd.DataFrame({'Total de transacciones': [transactions_total]}).to_excel(writer, sheet_name='Total', index=False)
         # Guardar el DataFrame combinado en una hoja de cálculo
@@ -677,7 +685,7 @@ g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE,vd.zeta,s.Secci
         transacciones_por_cliente.to_excel(writer, sheet_name='Transacciones_clientes', index=False)
         clientes_subseccion.to_excel(writer, sheet_name='Total_seccion', index=False)
         clientes_cod_subseccion.to_excel(writer, sheet_name='Unicos_seccion', index=False)
-
+    messagebox.showinfo("Guardar", f"Los resultados se han guardado exitosamente en el archivo.")
 #########################
 
 
