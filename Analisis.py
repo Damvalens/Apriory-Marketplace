@@ -103,6 +103,7 @@ GROUP BY
                 results.to_csv(file_path, index=False)
             messagebox.showinfo("Guardar", f"Los resultados se han guardado exitosamente en el archivo.")
 
+
 def create_and_run_interface():
     global proveedor_entry, registro_button, query_button, back_button, labels
 
@@ -537,9 +538,12 @@ g.DESCRIPCION_GRUPO,  d.DESCRIPCION_CATE, f.DESCRIPCION_SUB_CATE,vd.zeta,s.Secci
             # Resta la cantidad de transacciones con otras secciones a la cantidad total de transacciones
             result = total_transactions - other_transactions_count
             # Imprime los resultados
-            print(f'Total de transacciones: {total_transactions}')
-            print(f'Transacciones únicas: {unique_transactions_count}')
-            print(f'Transacciones con otras secciones: {other_transactions_count}')
+            messagebox.showinfo("'Total de transacciones:", f" Total de transacciones :{total_transactions}'")
+            messagebox.showinfo("'Transacciones únicas:", f" Transacciones únicas :{unique_transactions_count}'")
+            messagebox.showinfo("'Transacciones con otras secciones:", f" Transacciones con otras secciones :{other_transactions_count}'")
+            # print(f'Total de transacciones: {total_transactions}')
+            # print(f'Transacciones únicas: {unique_transactions_count}')
+            # print(f'Transacciones con otras secciones: {other_transactions_count}')
     # Crear una copia del DataFrame data sin modificarlo
     data_sin_duplicados = data.copy()
     # Agrupar los datos por proveedor y calcular el total de nro transacción por proveedores
