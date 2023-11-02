@@ -1,0 +1,56 @@
+import kivy
+from kivy.app import App
+from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.label import Label
+from kivy.uix.button import Button
+from kivy.uix.filechooser import FileChooserListView
+from mlxtend.preprocessing import TransactionEncoder
+from mlxtend.frequent_patterns import apriori, association_rules
+import pandas as pd
+
+kivy.require('2.0.0')  # Asegúrate de usar una versión compatible de Kivy
+
+
+class SQLAnalysisApp(App):
+    def build(self):
+        self.title = 'Análisis de Reglas de Asociación'
+        layout = BoxLayout(orientation='vertical', spacing=10, padding=10)
+
+        self.file_chooser = FileChooserListView()
+        self.file_chooser.path = '.'
+
+        analyze_button = Button(text="Realizar Análisis")
+        analyze_button.bind(on_press=self.analyze_data)
+
+        layout.add_widget(self.file_chooser)
+        layout.add_widget(analyze_button)
+
+        self.result_label = Label(text="Resultados:")
+        layout.add_widget(self.result_label)
+
+        return layout
+
+    def analyze_data(self, instance):
+        selected_file = self.file_chooser.selection
+        if selected_file:
+            # Cargar los datos desde el archivo seleccionado
+            data = pd.read_excel(selected_file[0])
+
+            # Convierte los datos a una lista de transacciones
+            transactions = []
+            for trans_id, group in data.groupby('Nro_transaccion'):
+                transactions.append(list(group['Cod_seccion'].values))
+
+            # Convierte las transacciones en una matriz binaria
+            te = TransactionEncoder()
+            te_ary = te.fit_transform(transactions)
+            data_bin = pd.DataFrame(te_ary, columns=te.columns_)
+
+            # Ejecutar el algoritmo Apriori
+            frequent_itemsets = apriori(data_bin, min_support=0.01, use_colnames=True, max_len=None)
+
+            # Crea las reglas de asociación entre secciones
+            rules = association_rules(frequent_itemsets, metric="lift", min_threshold=1)
+
+            # Formatear y mostrar los resultados
+            self.result_label.text = "Resultados del análisis:\n" + str(rules)
